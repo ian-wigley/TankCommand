@@ -10,13 +10,14 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <DebugType>full</DebugType>
     <DebugSymbols>true</DebugSymbols>
-    <TypeScriptToolsVersion>1.8</TypeScriptToolsVersion>
+    <TypeScriptToolsVersion>4.1</TypeScriptToolsVersion>
     <UseIISExpress>true</UseIISExpress>
     <IISExpressSSLPort />
     <IISExpressAnonymousAuthentication />
     <IISExpressWindowsAuthentication />
     <IISExpressUseClassicPipelineMode />
     <UseGlobalApplicationHostFile />
+    <Use64BitIISExpress />
   </PropertyGroup>
   <ItemGroup>
     <Content Include="app.css" />
@@ -25,16 +26,17 @@
     </Content>
     <Content Include="index.html" />
     <Content Include="require.js" />
+    <Content Include="stats.js" />
     <Content Include="three.js" />
     <Content Include="web.config" />
   </ItemGroup>
   <ItemGroup>
-    <TypeScriptCompile Include="BaseObject.ts" />
+    <TypeScriptCompile Include="ammo.d.ts" />
     <TypeScriptCompile Include="ColladaLoader.d.ts" />
     <TypeScriptCompile Include="Input.ts" />
+    <TypeScriptCompile Include="stats.d.ts" />
     <TypeScriptCompile Include="TankCommand.ts" />
     <TypeScriptCompile Include="main.ts" />
-    <TypeScriptCompile Include="Rectangle.ts" />
     <TypeScriptCompile Include="require.d.ts" />
     <TypeScriptCompile Include="Terrain.ts" />
     <TypeScriptCompile Include="three.d.ts" />

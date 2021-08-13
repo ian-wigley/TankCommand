@@ -21,8 +21,7 @@ class Terrain {
     constructor(heightMap, terrainTex, scene: THREE.Scene) {
         this.m_scene = scene;
 
-        var gridXZ = new THREE.GridHelper(100, 10);
-        gridXZ.setColors(new THREE.Color(0x8f8f8f), new THREE.Color(0x8f8f8f));
+        var gridXZ = new THREE.GridHelper(100, 10, new THREE.Color(0x8f8f8f), new THREE.Color(0x8f8f8f));
         gridXZ.position.set(0, 0, 0);
         scene.add(gridXZ);
 
@@ -60,13 +59,10 @@ class Terrain {
 
         geometry.name = "Terrain";
 
-        var numPlaneVerts = geometry.vertices.length;
-        var numHeightVals = heightData.length;
-
         // Iterate through the plane & adjust the height values accordingly
         for (var i = 0; i < geometry.vertices.length; i++) {
 
-            geometry.vertices[i].y += heightData[i];// * -1;
+            geometry.vertices[i].y += heightData[i];
         }
 
         var texture = new THREE.CanvasTexture(terrainTex);
