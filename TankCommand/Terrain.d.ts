@@ -1,14 +1,11 @@
 import THREE = require("three");
 declare class Terrain {
-    m_scene: THREE.Scene;
-    worldWidth: number;
-    levels: number;
-    resolution: number;
-    terrainTex: any;
-    heightData: any[];
-    constructor(heightMap: any, terrainTex: any, scene: THREE.Scene);
-    private BuildMesh;
+    private m_scene;
+    private geometry;
+    constructor(scene: THREE.Scene);
+    initialise(heightMap: any, terrainTex: any): void;
     private CreateTiles;
     private GetImageData;
+    getHeight(x: number, z: number): number;
 }
 export = Terrain;

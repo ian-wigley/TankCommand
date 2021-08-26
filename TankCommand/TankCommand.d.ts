@@ -10,6 +10,7 @@ declare class TankCommand {
     private m_tank;
     private m_arrowHelper;
     private m_cameraArrowHelper;
+    private bbHelper;
     private stats;
     private m_angle;
     private currentPosition;
@@ -18,10 +19,9 @@ declare class TankCommand {
     init(): void;
     private onProgress;
     private onError;
-    private ColCallBack;
     run(): void;
     private addHitListener;
-    onResizeScreen(event: any): void;
+    private onResizeScreen;
     private onKeyPress;
     private onKeyUp;
     private onKeyboardPress;
@@ -31,6 +31,6 @@ declare class TankCommand {
     private updateCamera;
     private calculateIdealOffet;
     private calculateIdealLookAt;
-    draw(): void;
+    private draw;
 }
 export = TankCommand;

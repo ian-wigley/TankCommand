@@ -17,6 +17,7 @@ class TankCommand {
     private m_tank: THREE.Mesh;
     private m_arrowHelper: THREE.ArrowHelper;
     private m_cameraArrowHelper: THREE.ArrowHelper;
+    private bbHelper: THREE.BoundingBoxHelper;
     private stats;
     private m_angle: number = 0;
     private currentPosition: THREE.Vector3;
@@ -40,17 +41,17 @@ class TankCommand {
 
         // Load tank model & add it to the scene
         loader.load("./models/Tiger.jpg", function (collada) {
-            var t = collada.scene;
             _this.m_tank = collada.scene;
-            var skin = collada.skins[0];
             _this.m_tank.position.set(0, 11, 15);
+            _this.m_tank.scale.set(0.5, 0.5, 0.5);
             _this.scene.add(_this.m_tank);
 
-            _this.m_camera.position.z = 150 + _this.m_tank.position.z;
+            _this.bbHelper = new THREE.BoundingBoxHelper(_this.m_tank, 0xff0000);
+            _this.bbHelper.update();
+            // If you want a visible bounding box
+            _this.scene.add(_this.bbHelper);
 
-            var gridXZ = new THREE.GridHelper(100, 10, new THREE.Color(0x8f8f8f), new THREE.Color(0x8f8f8f));
-            gridXZ.position.set(0, 0, 0);
-            _this.scene.add(gridXZ);
+            _this.m_camera.position.z = 150 + _this.m_tank.position.z;
 
             const dir = new THREE.Vector3(0, 0, -1);
             //normalize the direction vector (convert to vector of length 1)
@@ -65,7 +66,6 @@ class TankCommand {
             const camHex = 0xff0000;
             _this.m_cameraArrowHelper = new THREE.ArrowHelper(dir, camOrigin, length, camHex);
             _this.scene.add(_this.m_cameraArrowHelper);
-
 
             console.log("Model loading complete");
 
@@ -131,28 +131,26 @@ class TankCommand {
         var heightMap: HTMLImageElement = <HTMLImageElement>document.getElementById("hmap");
         var terrainTex: HTMLImageElement = <HTMLImageElement>document.getElementById("volc");
 
-        this.m_terrain = new Terrain(heightMap, terrainTex, this.scene);
+        this.m_terrain = new Terrain(this.scene);
+        this.m_terrain.initialise(heightMap, terrainTex);
 
         this.addHitListener(this.canvas);
     }
 
-    private onProgress() {
+    private onProgress(): void {
         console.log("Loading model");
     }
 
-    private onError() {
+    private onError(): void {
         console.log("Error Loading model");
     }
 
-    private ColCallBack(collada) {
-        var skin = collada.skins[0];
-    }
 
     public run(): void {
         this.update();
     }
 
-    private addHitListener(element: HTMLElement) {
+    private addHitListener(element: HTMLElement): void {
         window.addEventListener("keydown", (event) => {
             this.onKeyPress(event);
             return null;
@@ -168,8 +166,7 @@ class TankCommand {
         });
     }
 
-
-    public onResizeScreen(event) {
+    private onResizeScreen(event): void {
         var WIDTH = window.innerWidth;
         var HEIGHT = window.innerHeight;
         this.renderer.setSize(WIDTH, HEIGHT);
@@ -199,13 +196,17 @@ class TankCommand {
                 this.m_ctrl.left = true;
                 break;
             case 38:
-                this.m_ctrl.up = true;
+                if (this.m_tank.position.z > -1199.5 && this.m_tank.position.z < 1200.5) {
+                    this.m_ctrl.up = true;
+                }
                 break;
             case 39:
                 this.m_ctrl.right = true;
                 break;
             case 40:
-                this.m_ctrl.down = true;
+                if (this.m_tank.position.z > -1199.5 && this.m_tank.position.z < 1200.5) {
+                    this.m_ctrl.down = true;
+                }
                 break;
         }
     }
@@ -236,7 +237,9 @@ class TankCommand {
 
     private update(): void {
         if (this.m_arrowHelper != undefined && this.m_tank !== undefined) {
+            var height = this.m_terrain.getHeight(this.m_tank.position.x, this.m_tank.position.z);
             this.updateTank();
+            this.bbHelper.update();
             this.updateCamera();
             this.draw();
         }
@@ -304,7 +307,7 @@ class TankCommand {
         return idealLookat;
     }
 
-    public draw(): void {
+    private draw(): void {
         if (this.m_arrowHelper != undefined && this.m_tank !== undefined) {
             this.stats.update();
             this.renderer.render(this.scene, this.m_camera);
