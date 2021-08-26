@@ -9,10 +9,11 @@ declare class TankCommand {
     private m_ctrl;
     private m_tank;
     private m_arrowHelper;
+    private m_cameraArrowHelper;
     private stats;
     private m_angle;
-    private m_sceneWidth;
-    private m_sceneHeight;
+    private currentPosition;
+    private currentLookat;
     constructor();
     init(): void;
     private onProgress;
@@ -26,6 +27,10 @@ declare class TankCommand {
     private onKeyboardPress;
     private onKeyboardRelease;
     private update;
+    private updateTank;
+    private updateCamera;
+    private calculateIdealOffet;
+    private calculateIdealLookAt;
     draw(): void;
 }
 export = TankCommand;

@@ -9,7 +9,6 @@ import Input = require("Input");
 class TankCommand {
 
     private canvas: HTMLCanvasElement;
-//    private ctx: CanvasRenderingContext2D;
     private renderer: THREE.WebGLRenderer;
     private scene: THREE.Scene;
     private m_camera: THREE.PerspectiveCamera;
@@ -17,12 +16,17 @@ class TankCommand {
     private m_ctrl: Input = new Input();
     private m_tank: THREE.Mesh;
     private m_arrowHelper: THREE.ArrowHelper;
+    private m_cameraArrowHelper: THREE.ArrowHelper;
     private stats;
     private m_angle: number = 0;
-    private m_sceneWidth;
-    private m_sceneHeight;
+    private currentPosition: THREE.Vector3;
+    private currentLookat: THREE.Vector3;
 
-    constructor() { }
+
+    constructor() {
+        this.currentPosition = new THREE.Vector3();
+        this.currentLookat = new THREE.Vector3();
+    }
 
     public init(): void {
 
@@ -57,19 +61,23 @@ class TankCommand {
             _this.m_arrowHelper = new THREE.ArrowHelper(dir, origin, length, hex);
             _this.scene.add(_this.m_arrowHelper);
 
+            const camOrigin = new THREE.Vector3(_this.m_tank.position.x, _this.m_tank.position.y + 30, _this.m_tank.position.z + 30);
+            const camHex = 0xff0000;
+            _this.m_cameraArrowHelper = new THREE.ArrowHelper(dir, camOrigin, length, camHex);
+            _this.scene.add(_this.m_cameraArrowHelper);
+
+
             console.log("Model loading complete");
 
-         }, this.onProgress, this.onError);
+        }, this.onProgress, this.onError);
 
         this.scene = new THREE.Scene();
-        var WIDTH = window.innerWidth,
-            HEIGHT = window.innerHeight;
-
+        var width = window.innerWidth;
+        var height = window.innerHeight;
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.renderer.setSize(WIDTH, HEIGHT);
+        this.renderer.setSize(width, height);
         document.body.appendChild(this.renderer.domElement);
         document.body.style.overflow = "hidden";
-
 
         // STATS
         this.stats = new Stats();
@@ -129,7 +137,7 @@ class TankCommand {
     }
 
     private onProgress() {
-         console.log("Loading model");
+        console.log("Loading model");
     }
 
     private onError() {
@@ -227,42 +235,73 @@ class TankCommand {
     }
 
     private update(): void {
-
         if (this.m_arrowHelper != undefined && this.m_tank !== undefined) {
-            if (this.m_ctrl.up) {
-                this.m_tank.position.z -= 0.5;
-                this.m_camera.position.z -= 0.5;
-                var newVector = new THREE.Vector3(-Math.sin(this.m_angle), 0, -Math.cos(this.m_angle)).normalize();
-                this.m_tank.position.add(newVector);
-                this.m_camera.position.add(newVector);
-            }
-            if (this.m_ctrl.down) {
-                this.m_tank.position.z += 0.5;
-                this.m_camera.position.z += 0.5;
-                var newVector = new THREE.Vector3(Math.sin(this.m_angle), 0, Math.cos(this.m_angle)).normalize();
-                this.m_tank.position.add(newVector);
-                this.m_camera.position.add(newVector);
-            }
-            if (this.m_ctrl.left) {
-                this.m_tank.rotateOnAxis(new THREE.Vector3(0, 1, 0), 0.1);
-                this.m_camera.rotateOnAxis(new THREE.Vector3(0, 1, 0), 0.1);
-                this.m_angle += 0.1;
-                var newVector = new THREE.Vector3(-Math.sin(this.m_angle), 0, -Math.cos(this.m_angle)).normalize();
-                this.m_arrowHelper.setDirection(newVector);
-            }
-            if (this.m_ctrl.right) {
-                this.m_tank.rotateOnAxis(new THREE.Vector3(0, 1, 0), -0.1);
-                this.m_camera.rotateOnAxis(new THREE.Vector3(0, 1, 0), -0.1);
-                this.m_angle -= 0.1;
-                var newVector = new THREE.Vector3(-Math.sin(this.m_angle), 0, -Math.cos(this.m_angle)).normalize();
-                this.m_arrowHelper.setDirection(newVector);
-            }
+            this.updateTank();
+            this.updateCamera();
+            this.draw();
+        }
+        requestAnimationFrame(this.update.bind(this));
+    }
 
-            this.m_arrowHelper.position.set(this.m_tank.position.x, this.m_tank.position.y + 30, this.m_tank.position.z);
+    private updateTank(): void {
+        if (this.m_ctrl.up) {
+            this.m_tank.position.z -= 0.5;
+            var newVector = new THREE.Vector3(-Math.sin(this.m_angle), 0, -Math.cos(this.m_angle)).normalize();
+            this.m_tank.position.add(newVector);
+        }
+        if (this.m_ctrl.down) {
+            this.m_tank.position.z += 0.5;
+            var newVector = new THREE.Vector3(Math.sin(this.m_angle), 0, Math.cos(this.m_angle)).normalize();
+            this.m_tank.position.add(newVector);
+        }
+        if (this.m_ctrl.left) {
+            this.m_tank.rotateOnAxis(new THREE.Vector3(0, 1, 0), 0.1);
+            this.m_angle += 0.1;
+            var newVector = new THREE.Vector3(-Math.sin(this.m_angle), 0, -Math.cos(this.m_angle)).normalize();
+            this.m_arrowHelper.setDirection(newVector);
+            this.m_cameraArrowHelper.setDirection(newVector);
+        }
+        if (this.m_ctrl.right) {
+            this.m_tank.rotateOnAxis(new THREE.Vector3(0, 1, 0), -0.1);
+            this.m_angle -= 0.1;
+            var newVector = new THREE.Vector3(-Math.sin(this.m_angle), 0, -Math.cos(this.m_angle)).normalize();
+            this.m_arrowHelper.setDirection(newVector);
+            this.m_cameraArrowHelper.setDirection(newVector);
         }
 
-        this.draw();
-        requestAnimationFrame(this.update.bind(this));
+        this.m_arrowHelper.position.set(this.m_tank.position.x, this.m_tank.position.y + 30, this.m_tank.position.z);
+        this.m_cameraArrowHelper.position.set(this.m_tank.position.x - 10, this.m_tank.position.y + 30, this.m_tank.position.z - 10);
+
+        document.getElementById("cameraPositionX").innerHTML = this.m_tank.position.x.toString();
+        document.getElementById("cameraPositionY").innerHTML = this.m_tank.position.y.toString();
+        document.getElementById("cameraPositionZ").innerHTML = this.m_tank.position.z.toString();
+    }
+
+    private updateCamera(): void {
+        const idealOffset = this.calculateIdealOffet();
+        const idealLookAt = this.calculateIdealLookAt();
+
+        const t = 1.0 - Math.pow(0.001, 0.01);
+
+        this.currentPosition.lerp(idealOffset, t);
+        this.currentLookat.lerp(idealLookAt, t);
+
+        this.m_camera.position.copy(this.currentPosition);
+        this.m_camera.lookAt(this.currentLookat);
+    }
+
+    private calculateIdealOffet(): THREE.Vector3 {
+        const idealOffset = new THREE.Vector3(-15, 20, 30);
+        idealOffset.applyQuaternion(this.m_tank.quaternion);
+        idealOffset.add(this.m_tank.position);
+        return idealOffset;
+    }
+
+    private calculateIdealLookAt(): THREE.Vector3 {
+        const idealLookat = new THREE.Vector3(0, 10, -50);
+        idealLookat.applyQuaternion(this.m_tank.quaternion);
+        idealLookat.add(this.m_tank.position);
+        return idealLookat;
     }
 
     public draw(): void {
