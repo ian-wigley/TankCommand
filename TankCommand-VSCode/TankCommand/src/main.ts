@@ -65,8 +65,8 @@ class TankCommand {
             }, this.onProgress, this.onError);
 
             this.scene = new THREE.Scene();
-            var width = window.innerWidth;
-            var height = window.innerHeight;
+            let width = window.innerWidth;
+            let height = window.innerHeight;
             this.renderer = new THREE.WebGLRenderer({ antialias: true });
             this.renderer.setSize(width, height);
             document.body.appendChild(this.renderer.domElement);
@@ -104,32 +104,30 @@ class TankCommand {
                 var sky = new THREE.Mesh(skyGeo, skyMat);
                 scene.add(sky);
             */
-            var light = new THREE.PointLight(0xfffff3, 0.8);
+            let light = new THREE.PointLight(0xfffff3, 0.8);
             light.position.set(-100, 200, 100);
             this.scene.add(light);
 
-            var sphereSize = 1;
-            var pointLightHelper = new THREE.PointLightHelper(light, sphereSize);
+            let sphereSize = 1;
+            let pointLightHelper = new THREE.PointLightHelper(light, sphereSize);
             this.scene.add(pointLightHelper);
 
-            var light2 = new THREE.PointLight(0xd7f0ff, 0.2);
+            let light2 = new THREE.PointLight(0xd7f0ff, 0.2);
             light2.position.set(200, 200, 100);
             this.scene.add(light2);
 
-            var sphereSize = 1;
-            var pointLightHelper2 = new THREE.PointLightHelper(light2, sphereSize);
+            let pointLightHelper2 = new THREE.PointLightHelper(light2, sphereSize);
             this.scene.add(pointLightHelper2);
 
-            var light3 = new THREE.PointLight(0xFFFFFF, 0.5);
+            let light3 = new THREE.PointLight(0xFFFFFF, 0.5);
             light3.position.set(150, 200, -100);
             this.scene.add(light3);
 
-            var sphereSize = 1;
-            var pointLightHelper3 = new THREE.PointLightHelper(light3, sphereSize);
+            let pointLightHelper3 = new THREE.PointLightHelper(light3, sphereSize);
             this.scene.add(pointLightHelper3);
 
-            var heightMap: HTMLImageElement = <HTMLImageElement>document.getElementById("hmap");
-            var terrainTex: HTMLImageElement = <HTMLImageElement>document.getElementById("volc");
+            let heightMap: HTMLImageElement = <HTMLImageElement>document.getElementById("hmap");
+            let terrainTex: HTMLImageElement = <HTMLImageElement>document.getElementById("volc");
 
             this.m_terrain = new Terrain(this.scene);
             this.m_terrain.initialise(heightMap, terrainTex);
@@ -166,8 +164,8 @@ class TankCommand {
       }
 
       private onResizeScreen(): void {
-            var WIDTH = window.innerWidth;
-            var HEIGHT = window.innerHeight;
+            let WIDTH = window.innerWidth;
+            let HEIGHT = window.innerHeight;
             this.renderer.setSize(WIDTH, HEIGHT);
             this.m_camera.aspect = WIDTH / HEIGHT;
             this.m_camera.updateProjectionMatrix();
