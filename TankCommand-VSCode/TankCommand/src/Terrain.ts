@@ -21,22 +21,22 @@ export class Terrain {
     public initialise(heightMap: any, terrainTex: any) {
 
         // Get the data from the texture
-        var imagedata = this.GetImageData(heightMap);
-        var pixelData = imagedata.data;
-        var heightData = [];
+        let imagedata = this.GetImageData(heightMap);
+        let pixelData = imagedata.data;
+        let heightData = [];
 
-        for (var i = 0; i < pixelData.length; i += 4) {
+        for (let i = 0; i < pixelData.length; i += 4) {
             // RGB elements are combined & the alpha value is skipped
             heightData.push((pixelData[i] + pixelData[i + 1] + pixelData[i + 2]) / 10);
         }
 
-        this.CreateTiles(-50, -10, heightData, terrainTex);
+        this.CreateGeometry(-50, -10, heightData, terrainTex);
     }
 
     // Function to Create a Tile that represents the heightmap
-    private CreateTiles(x: any, z: any, heightData: any, terrainTex: any): void {
+    private CreateGeometry(x: any, z: any, heightData: any, terrainTex: any): void {
 
-        var numSegments = 255;
+        let numSegments = 255;
 
         // Create a plane PlaneGeometry(width, height, widthSegments, heightSegments)
         this.geometry = new THREE.PlaneGeometry(2400, 2400, numSegments, numSegments);
@@ -46,20 +46,17 @@ export class Terrain {
 
         // Iterate through the plane & adjust the height values accordingly
         //attributes.position.array
-        // for (var i = 0; i < this.geometry.userData.vertices.length; i++) {
-        let vertices = this.geometry.attributes.position;//.array;
-        for (var i = 0; i < vertices.array.length; i++) {
-            // this.geometry.userData.vertices[i].y += heightData[i];
-            // vertices[i] += heightData[i];
-            vertices.setZ(i, heightData[i] += vertices.getZ(i));
-            this.geometry.attributes.position.setZ(i, heightData[i] += vertices.getZ(i));
+        let vertices = this.geometry.attributes.position;
+        for (let i = 0; i < vertices.array.length; i++) {
+            let height = heightData[i]
+            vertices.setY(i, height);
         }
 
-        var texture = new THREE.CanvasTexture(terrainTex);
+        let texture = new THREE.CanvasTexture(terrainTex);
         texture.wrapS = THREE.ClampToEdgeWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
 
-        var mesh = new THREE.Mesh(this.geometry, new THREE.MeshBasicMaterial({ map: texture }));
+        let mesh = new THREE.Mesh(this.geometry, new THREE.MeshBasicMaterial({ map: texture }));
         this.m_scene.add(mesh);
     }
 
@@ -80,7 +77,7 @@ export class Terrain {
     public getHeight(x: number, z: number): number {
 
         //Calculate which cell we are in
-        var indexBase: number = 0;
+        let indexBase: number = 0;
         const _terrainStartX = 0;
         const _terrainStartZ = 0;
         const _spacing = 10;
@@ -121,7 +118,7 @@ export class Terrain {
         //const index1 = _indices[indexBase + 1];
         //const index2 = _indices[indexBase + 2];
 
-        var _point: THREE.Vector3 = new THREE.Vector3(_dx, 0.0, _dz);
+        let _point: THREE.Vector3 = new THREE.Vector3(_dx, 0.0, _dz);
 
         // Calculate the Triangle Normal
         const _u: THREE.Vector3 = new THREE.Vector3(0.3, 0.3, 0.3);
@@ -142,7 +139,7 @@ export class Terrain {
         const Nz = _normal.z;
         const Ny = _normal.y;
 
-        // var _v0 = this.geometry.userData.vertices[0].y;//[index0]
+        // let _v0 = this.geometry.userData.vertices[0].y;//[index0]
         let _v0 = this.geometry.attributes.position.array[0]
 
         return _point.y = _v0 + ((Nx * _dx) + (Nz * _dz) / -Ny);
