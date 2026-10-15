@@ -4,15 +4,11 @@ export class Terrain {
 
     private m_scene: THREE.Scene;
     private geometry!: THREE.PlaneGeometry;
-
-    //https://github.com/felixpalmer/lod-terrain/blob/master/js/app/terrain.js
-    //http://stackoverflow.com/questions/28188775/generate-texture-from-array-in-threejs
-    //http://threejs.org/docs/#Reference/Textures/DataTexture
-    //http://www.lab4games.net/zz85/blog/2014/11/08/exploring-simple-noise-and-clouds-with-three-js/
-    //https://github.com/mrdoob/three.js/issues/758
-    //http://www.smartjava.org/content/threejs-render-real-world-terrain-heightmap-using-open-data
-    //http://stackoverflow.com/questions/21232332/my-javascript-code-doesnt-work-outside-of-jsfiddle/21277768#21277768
-    //http://stackoverflow.com/questions/16449445/how-can-i-set-image-source-with-base64
+    private heightData: number[] = [];
+    private readonly numSegments = 255;
+    private readonly size = 2400;
+    private originX = -50;   // same values you pass to makeTranslation
+    private originZ = -10;
 
     constructor(scene: THREE.Scene) {
         this.m_scene = scene;
@@ -29,8 +25,9 @@ export class Terrain {
             // RGB elements are combined & the alpha value is skipped
             heightData.push((pixelData[i] + pixelData[i + 1] + pixelData[i + 2]) / 10);
         }
-
-        this.CreateGeometry(-50, -10, heightData, terrainTex);
+        this.heightData = heightData;
+        this.CreateGeometry(this.originX, this.originZ, heightData, terrainTex);
+        //this.CreateGeometry(-50, -10, heightData, terrainTex);
     }
 
     // Function to Create a Tile that represents the heightmap
@@ -45,12 +42,11 @@ export class Terrain {
         this.geometry.name = "Terrain";
 
         // Iterate through the plane & adjust the height values accordingly
-        //attributes.position.array
         let vertices = this.geometry.attributes.position;
-        for (let i = 0; i < vertices.array.length; i++) {
-            let height = heightData[i]
-            vertices.setY(i, height);
+        for (let i = 0; i < vertices.count; i++) {
+            vertices.setY(i, heightData[i]);
         }
+        vertices.needsUpdate = true;
 
         let texture = new THREE.CanvasTexture(terrainTex);
         texture.wrapS = THREE.ClampToEdgeWrapping;
@@ -74,7 +70,39 @@ export class Terrain {
         return context.getImageData(0, 0, image.width, image.height);
     }
 
+
     public getHeight(x: number, z: number): number {
+        const n = this.numSegments;
+        const stride = n + 1;               // vertices per row (256)
+        const half = this.size / 2;
+
+        // World -> grid coordinates (0..n)
+        const u = ((x - (this.originX - half)) / this.size) * n;
+        const v = ((z - (this.originZ - half)) / this.size) * n;
+
+        // Outside the terrain
+        if (u < 0 || v < 0 || u > n || v > n) return 0;
+
+        const col = Math.min(Math.floor(u), n - 1);
+        const row = Math.min(Math.floor(v), n - 1);
+        const fx = u - col;                 // 0..1 within the cell
+        const fz = v - row;
+
+        const h = (r: number, c: number) => this.heightData[r * stride + c];
+        const h00 = h(row, col);
+        const h10 = h(row, col + 1);
+        const h01 = h(row + 1, col);
+        const h11 = h(row + 1, col + 1);
+
+        // PlaneGeometry splits each cell along the (col,row+1)-(col+1,row) diagonal,
+        // so interpolate on whichever triangle we're in. This matches what's rendered.
+        if (fx + fz <= 1) {
+            return h00 + (h10 - h00) * fx + (h01 - h00) * fz;
+        }
+        return h11 + (h01 - h11) * (1 - fx) + (h10 - h11) * (1 - fz);
+    }
+
+    public old_getHeight(x: number, z: number): number {
 
         //Calculate which cell we are in
         let indexBase: number = 0;
@@ -83,7 +111,7 @@ export class Terrain {
         const _spacing = 10;
         const _gridSize = 256;
         const _numCellCols = 255;
-        const _numCellRows = 255;
+        // const _numCellRows = 255;
 
         const _cellX = ((x - _terrainStartX) / _spacing);
         const _cellZ = ((_terrainStartZ - z) / _spacing);
@@ -106,6 +134,8 @@ export class Terrain {
         else {
             indexBase = (_cellZ * _numCellCols + _cellX) * 6 + 3;
         }
+
+        console.log(indexBase);
 
         // v0---v1
         // |\   | <-dx->
