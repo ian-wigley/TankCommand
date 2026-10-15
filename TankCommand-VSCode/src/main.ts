@@ -1,18 +1,20 @@
 import * as THREE from 'three'
-import Stats from 'three/examples/jsm/libs/stats.module'
-import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader'
+import Stats from 'three/addons/libs/stats.module.js';
+import { ColladaLoader } from 'three/addons/loaders/ColladaLoader.js';
 import { InputControls } from './Input'
 import { Terrain } from './Terrain';
 
 class TankCommand {
 
-      private canvas!: HTMLCanvasElement;
       private renderer!: THREE.WebGLRenderer;
       private scene!: THREE.Scene;
       private m_camera!: THREE.PerspectiveCamera;
       private m_terrain!: Terrain;
       private m_ctrl: InputControls = new InputControls();
-      private m_tank!: THREE.Mesh;
+
+      private m_tank!: THREE.Group;
+      private m_clock = new THREE.Clock();
+
       private m_arrowHelper!: THREE.ArrowHelper;
       private m_cameraArrowHelper!: THREE.ArrowHelper;
       private bbHelper!: THREE.BoxHelper;
@@ -20,6 +22,7 @@ class TankCommand {
       private m_angle: number = 0;
       private currentPosition: THREE.Vector3;
       private currentLookat: THREE.Vector3;
+      private readonly tankHeightOffset = 0; // tweak so the tracks sit on the surface
 
       constructor() {
             this.currentPosition = new THREE.Vector3();
@@ -33,11 +36,19 @@ class TankCommand {
             // loader.options.convertUpAxis = true;
 
             // Load tank model & add it to the scene
-            loader.load("./models/Tiger.jpg", function (collada: any) {
-                  _this.m_tank = collada.scene;
+            loader.load("./models/Tiger.dae", function (collada: any) {
+
+                  const model = collada.scene;
+                  model.scale.set(0.5, 0.5, 0.5);
+
+                  _this.m_tank = new THREE.Group();
+                  _this.m_tank.add(model);
                   _this.m_tank.position.set(0, 11, 15);
-                  _this.m_tank.scale.set(0.5, 0.5, 0.5);
                   _this.scene.add(_this.m_tank);
+
+                  // Start the camera at its ideal spot rather than swooping in from (0,0,0)
+                  _this.currentPosition.copy(_this.calculateIdealOffet());
+                  _this.currentLookat.copy(_this.calculateIdealLookAt());
 
                   _this.bbHelper = new THREE.BoxHelper(_this.m_tank, 0xff0000);
                   _this.bbHelper.update();
@@ -132,7 +143,7 @@ class TankCommand {
             this.m_terrain = new Terrain(this.scene);
             this.m_terrain.initialise(heightMap, terrainTex);
 
-            this.addHitListener(this.canvas);
+            this.addHitListener();//this.canvas);
       }
 
       private onProgress(): void {
@@ -147,7 +158,7 @@ class TankCommand {
             this.update();
       }
 
-      private addHitListener(element: HTMLElement): void {
+      private addHitListener(): void {
             window.addEventListener("keydown", (event) => {
                   this.onKeyPress(event);
                   return null;
@@ -159,6 +170,7 @@ class TankCommand {
             });
 
             window.addEventListener('resize', (event) => {
+                  console.log(event);
                   this.onResizeScreen();
             });
       }
@@ -182,6 +194,7 @@ class TankCommand {
       }
 
       private onKeyboardPress(event: Event, touchDevice: boolean) {
+            console.log(touchDevice);
             switch (((<number>(<KeyboardEvent>event).keyCode | 0))) {
                   case 17:
                         //if (!this.fired) {
@@ -209,6 +222,7 @@ class TankCommand {
       }
 
       private onKeyboardRelease(event: Event, touchDevice: boolean) {
+            console.log(touchDevice);
             switch (((<number>(<KeyboardEvent>event).keyCode | 0))) {
                   case 17:
                         //this.m_ctrl.fire = false;
@@ -234,7 +248,7 @@ class TankCommand {
 
       private update(): void {
             if (this.m_arrowHelper != undefined && this.m_tank !== undefined) {
-                  let height = this.m_terrain.getHeight(this.m_tank.position.x, this.m_tank.position.z);
+                  // let height = this.m_terrain.getHeight(this.m_tank.position.x, this.m_tank.position.z);
                   this.updateTank();
                   this.bbHelper.update();
                   this.updateCamera();
@@ -243,35 +257,27 @@ class TankCommand {
             requestAnimationFrame(this.update.bind(this));
       }
 
-      private updateTank(): void {
-            if (this.m_ctrl.up) {
-                  this.m_tank.position.z -= 0.5;
-                  let newVector = new THREE.Vector3(-Math.sin(this.m_angle), 0, -Math.cos(this.m_angle)).normalize();
-                  this.m_tank.position.add(newVector);
-            }
-            if (this.m_ctrl.down) {
-                  this.m_tank.position.z += 0.5;
-                  let newVector = new THREE.Vector3(Math.sin(this.m_angle), 0, Math.cos(this.m_angle)).normalize();
-                  this.m_tank.position.add(newVector);
-            }
-            if (this.m_ctrl.left) {
-                  this.m_tank.rotateOnAxis(new THREE.Vector3(0, 1, 0), 0.1);
-                  this.m_angle += 0.1;
-                  let newVector = new THREE.Vector3(-Math.sin(this.m_angle), 0, -Math.cos(this.m_angle)).normalize();
-                  this.m_arrowHelper.setDirection(newVector);
-                  this.m_cameraArrowHelper.setDirection(newVector);
-            }
-            if (this.m_ctrl.right) {
-                  this.m_tank.rotateOnAxis(new THREE.Vector3(0, 1, 0), -0.1);
-                  this.m_angle -= 0.1;
-                  let newVector = new THREE.Vector3(-Math.sin(this.m_angle), 0, -Math.cos(this.m_angle)).normalize();
-                  this.m_arrowHelper.setDirection(newVector);
-                  this.m_cameraArrowHelper.setDirection(newVector);
-            }
 
+      private updateTank(): void {
+            const turnSpeed = 0.05;
+            const moveSpeed = 1;
+
+            if (this.m_ctrl.left) { this.m_angle += turnSpeed; }
+            if (this.m_ctrl.right) { this.m_angle -= turnSpeed; }
+            this.m_tank.rotation.y = this.m_angle;   // single source of truth for heading
+
+            const forward = new THREE.Vector3(-Math.sin(this.m_angle), 0, -Math.cos(this.m_angle));
+            if (this.m_ctrl.up) { this.m_tank.position.addScaledVector(forward, moveSpeed); }
+            if (this.m_ctrl.down) { this.m_tank.position.addScaledVector(forward, -moveSpeed); }
+
+            // Stay on the terrain (from the previous step)
+            const groundY = this.m_terrain.getHeight(this.m_tank.position.x, this.m_tank.position.z);
+            this.m_tank.position.y = groundY + this.tankHeightOffset;
+
+            this.m_arrowHelper.setDirection(forward);
+            this.m_cameraArrowHelper.setDirection(forward);
             this.m_arrowHelper.position.set(this.m_tank.position.x, this.m_tank.position.y + 30, this.m_tank.position.z);
             this.m_cameraArrowHelper.position.set(this.m_tank.position.x - 10, this.m_tank.position.y + 30, this.m_tank.position.z - 10);
-
             // document.getElementById("cameraPositionX").innerHTML = this.m_tank.position.x.toString();
             // document.getElementById("cameraPositionY").innerHTML = this.m_tank.position.y.toString();
             // document.getElementById("cameraPositionZ").innerHTML = this.m_tank.position.z.toString();
@@ -281,7 +287,8 @@ class TankCommand {
             const idealOffset = this.calculateIdealOffet();
             const idealLookAt = this.calculateIdealLookAt();
 
-            const t = 1.0 - Math.pow(0.001, 0.01);
+            const dt = this.m_clock.getDelta();
+            const t = 1.0 - Math.pow(0.001, dt);
 
             this.currentPosition.lerp(idealOffset, t);
             this.currentLookat.lerp(idealLookAt, t);
@@ -315,94 +322,3 @@ class TankCommand {
 let application = new TankCommand();
 application.init();
 application.run();
-
-
-// // Example from https://sbcode.net/threejs/stats-panel/
-
-// import * as THREE from 'three'
-// import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-// import Stats from 'three/examples/jsm/libs/stats.module'
-
-// const scene = new THREE.Scene()
-
-// const camera = new THREE.PerspectiveCamera(
-//       75,
-//       window.innerWidth / window.innerHeight,
-//       0.1,
-//       1000
-// )
-// camera.position.z = 2
-
-// const renderer = new THREE.WebGLRenderer()
-// renderer.setSize(window.innerWidth, window.innerHeight)
-// document.body.appendChild(renderer.domElement)
-
-// const controls = new OrbitControls(camera, renderer.domElement)
-// //controls.addEventListener('change', render)
-
-// const geometry = new THREE.BoxGeometry()
-// const material = new THREE.MeshBasicMaterial({
-//       color: 0x00ff00,
-//       wireframe: true,
-// })
-
-// const cube = new THREE.Mesh(geometry, material)
-// scene.add(cube)
-
-// window.addEventListener('resize', onWindowResize, false)
-// function onWindowResize() {
-//       camera.aspect = window.innerWidth / window.innerHeight
-//       camera.updateProjectionMatrix()
-//       renderer.setSize(window.innerWidth, window.innerHeight)
-//       //render()
-// }
-
-// const stats = new Stats()
-// document.body.appendChild(stats.dom)
-
-// function animate() {
-//       requestAnimationFrame(animate)
-
-//       cube.rotation.x += 0.01
-//       cube.rotation.y += 0.01
-
-//       render()
-
-//       stats.update()
-// }
-
-// function render() {
-//       renderer.render(scene, camera)
-// }
-
-// animate()
-// //render()
-
-// // import * as THREE from 'three';
-// // // import Stats from 'stats.js'
-// // import Stats from 'three/examples/jsm/libs/stats.module'
-
-// // const scene = new THREE.Scene();
-// // const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-// // const renderer = new THREE.WebGLRenderer();
-// // renderer.setSize(window.innerWidth, window.innerHeight);
-// // document.body.appendChild(renderer.domElement);
-
-// // const geometry = new THREE.BoxGeometry(1, 1, 1);
-// // const material = new THREE.MeshBasicMaterial({ color: "orange" });
-// // const cube = new THREE.Mesh(geometry, material);
-// // scene.add(cube);
-
-// // camera.position.z = 3;
-// // camera.position.y = -0.5;
-// // camera.position.x = -1;
-
-// // // STATS
-// // let stats = new Stats();
-// // stats.dom.style.position = 'absolute';
-// // stats.dom.style.top = '0px';
-// // document.body.appendChild(stats.dom);
-// // stats.update();
-
-// // renderer.render(scene, camera);
-
