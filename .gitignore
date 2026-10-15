@@ -24,3 +24,4 @@ TankCommand/TankCommand.csproj.user
 TankCommand/web.config
 TankCommand/web.Debug.config
 TankCommand/web.Release.config
+TankCommand-VSCode/package-lock.json
