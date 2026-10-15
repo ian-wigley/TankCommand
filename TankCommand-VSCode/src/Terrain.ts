@@ -7,18 +7,18 @@ export class Terrain {
     private heightData: number[] = [];
     private readonly numSegments = 255;
     private readonly size = 2400;
-    private originX = -50;   // same values you pass to makeTranslation
+    private originX = -50;
     private originZ = -10;
 
     constructor(scene: THREE.Scene) {
         this.m_scene = scene;
     }
 
-    public initialise(heightMap: any, terrainTex: any) {
+    public initialise(heightMap: any, terrainTex: any): void {
 
         // Get the data from the texture
-        let imagedata = this.GetImageData(heightMap);
-        let pixelData = imagedata.data;
+        let imageData = this.GetImageData(heightMap);
+        let pixelData = imageData.data;
         let heightData = [];
 
         for (let i = 0; i < pixelData.length; i += 4) {
@@ -27,14 +27,12 @@ export class Terrain {
         }
         this.heightData = heightData;
         this.CreateGeometry(this.originX, this.originZ, heightData, terrainTex);
-        //this.CreateGeometry(-50, -10, heightData, terrainTex);
     }
 
     // Function to Create a Tile that represents the heightmap
     private CreateGeometry(x: any, z: any, heightData: any, terrainTex: any): void {
 
         let numSegments = 255;
-
         // Create a plane PlaneGeometry(width, height, widthSegments, heightSegments)
         this.geometry = new THREE.PlaneGeometry(2400, 2400, numSegments, numSegments);
         this.geometry.applyMatrix4(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
@@ -49,6 +47,8 @@ export class Terrain {
         vertices.needsUpdate = true;
 
         let texture = new THREE.CanvasTexture(terrainTex);
+        texture.colorSpace = THREE.SRGBColorSpace;
+
         texture.wrapS = THREE.ClampToEdgeWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
 
@@ -73,10 +73,10 @@ export class Terrain {
 
     public getHeight(x: number, z: number): number {
         const n = this.numSegments;
-        const stride = n + 1;               // vertices per row (256)
+        const stride = n + 1;
         const half = this.size / 2;
 
-        // World -> grid coordinates (0..n)
+        // World -> grid coordinates (0...n)
         const u = ((x - (this.originX - half)) / this.size) * n;
         const v = ((z - (this.originZ - half)) / this.size) * n;
 
@@ -85,7 +85,8 @@ export class Terrain {
 
         const col = Math.min(Math.floor(u), n - 1);
         const row = Math.min(Math.floor(v), n - 1);
-        const fx = u - col;                 // 0..1 within the cell
+        // 0..1 within the cell
+        const fx = u - col;
         const fz = v - row;
 
         const h = (r: number, c: number) => this.heightData[r * stride + c];
@@ -102,76 +103,14 @@ export class Terrain {
         return h11 + (h01 - h11) * (1 - fx) + (h10 - h11) * (1 - fz);
     }
 
-    public old_getHeight(x: number, z: number): number {
-
-        //Calculate which cell we are in
-        let indexBase: number = 0;
-        const _terrainStartX = 0;
-        const _terrainStartZ = 0;
-        const _spacing = 10;
-        const _gridSize = 256;
-        const _numCellCols = 255;
-        // const _numCellRows = 255;
-
-        const _cellX = ((x - _terrainStartX) / _spacing);
-        const _cellZ = ((_terrainStartZ - z) / _spacing);
-
-        const verticesIndex = Math.abs(_cellZ * _gridSize + _cellX);
-
-        //this.geometry.attributes.position.array
-        // const _dx = x - this.geometry.userData.vertices[verticesIndex].x;
-        const _dx = x - this.geometry.attributes.position.array[verticesIndex];
-
-        // const _dz = z - this.geometry.userData.vertices[verticesIndex].z;
-        const _dz = x - this.geometry.attributes.position.array[verticesIndex];
-
-        // Get the first index of the triangle we are positioned in
-        // We are in triangle V0,V1,V2
-        if (_dz > _dx) {
-            indexBase = (_cellZ * _numCellCols + _cellX) * 6;
-        }
-        // We are in triangle V0,V2,V3
-        else {
-            indexBase = (_cellZ * _numCellCols + _cellX) * 6 + 3;
-        }
-
-        console.log(indexBase);
-
-        // v0---v1
-        // |\   | <-dx->
-        // | \  |   /\
-        // |  \ |   dz
-        // |   \|   \/
-        // v3---v2
-
-        //const index0 = _indices[indexBase];
-        //const index1 = _indices[indexBase + 1];
-        //const index2 = _indices[indexBase + 2];
-
-        let _point: THREE.Vector3 = new THREE.Vector3(_dx, 0.0, _dz);
-
-        // Calculate the Triangle Normal
-        const _u: THREE.Vector3 = new THREE.Vector3(0.3, 0.3, 0.3);
-        //_vertices[index1].position.x - _vertices[index0].position.x,
-        //_vertices[index1].position.y - _vertices[index0].position.y,
-        //_vertices[index1].position.z - _vertices[index0].position.z);
-
-        const _v: THREE.Vector3 = new THREE.Vector3(0.2, 0.2, 0.2);
-        //_vertices[index2].position.x - _vertices[index0].position.x,
-        //_vertices[index2].position.y - _vertices[index0].position.y,
-        //_vertices[index2].position.z - _vertices[index0].position.z);
-
-        const _normal: THREE.Vector3 = new THREE.Vector3;
-        _normal.crossVectors(_u, _v);
-        _normal.normalize();
-
-        const Nx = _normal.x;
-        const Nz = _normal.z;
-        const Ny = _normal.y;
-
-        // let _v0 = this.geometry.userData.vertices[0].y;//[index0]
-        let _v0 = this.geometry.attributes.position.array[0]
-
-        return _point.y = _v0 + ((Nx * _dx) + (Nz * _dz) / -Ny);
+    public getBounds(margin: number = 0) {
+        const half = this.size / 2;
+        return {
+            minX: this.originX - half + margin,
+            maxX: this.originX + half - margin,
+            minZ: this.originZ - half + margin,
+            maxZ: this.originZ + half - margin,
+        };
     }
+
 }
